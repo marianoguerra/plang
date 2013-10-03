@@ -8,3 +8,6 @@ plang-c:
 plang-c-jit:
 	@echo "Building Plang with JIT"
 	../../pypy/rpython/bin/rpython -Ojit plang.py
+
+clean:
+	rm plang-c
