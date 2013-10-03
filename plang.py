@@ -23,14 +23,18 @@ class UnboundVariable(Error):
         return '(UnboundVariable "%s")' % self.name
 
 class Env(Type):
-    def __init__(self, bindings):
+    def __init__(self, bindings, parent=None):
         self.bindings = bindings
+        self.parent = parent
 
     def get(self, name):
         result = self.bindings.get(name, None)
 
         if result is None:
-            raise UnboundVariable(name)
+            if self.parent is None:
+                raise UnboundVariable(name)
+            else:
+                return self.parent.get(name)
         else:
             return result
 
@@ -108,7 +112,8 @@ def print_result(result):
     print "result:", result.__str__()
 
 def entry_point(argv):
-    env = Env({"answer": Int(42)})
+    root = Env({"name": Keyword("bob")})
+    env = Env({"answer": Int(42)}, root)
     val_i = Int(42)
     val_f = Float(42.1)
 
@@ -130,9 +135,12 @@ def entry_point(argv):
     ccs = Cc(Symbol("answer"), print_result, env)
     ccs.run()
 
+    ccs1 = Cc(Symbol("name"), print_result, env)
+    ccs1.run()
+
     try:
-        ccs = Cc(Symbol("not_there"), print_result, env)
-        ccs.run()
+        ccs2 = Cc(Symbol("not_there"), print_result, env)
+        ccs2.run()
     except UnboundVariable as error:
         print "Error:", error.__str__()
 
