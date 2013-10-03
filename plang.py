@@ -7,7 +7,7 @@ class Type(BaseBox):
         pass
 
     def __str__(self):
-        return str(self.value)
+        return "<Type>"
 
     def eval(self, cc):
         return cc.resolve(self)
@@ -17,6 +17,17 @@ class Int(Type):
     def __init__(self, value):
         Type.__init__(self)
         self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+class Float(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
 
 class Cc(Type):
     def __init__(self, value, cont):
@@ -33,9 +44,15 @@ def print_result(result):
     print "result:", result.__str__()
 
 def entry_point(argv):
-    val = Int(42)
-    cc = Cc(val, print_result)
-    cc.run()
+    val_i = Int(42)
+    val_f = Float(42.1)
+
+    cci = Cc(val_i, print_result)
+    cci.run()
+
+    ccf = Cc(val_f, print_result)
+    ccf.run()
+
     return 0
 
 def target(*args):
