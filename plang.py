@@ -29,6 +29,20 @@ class Float(Type):
     def __str__(self):
         return str(self.value)
 
+class Bool(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def __str__(self):
+        if self.value:
+            return "true"
+        else:
+            return "false"
+
+true = Bool(True)
+false = Bool(False)
+
 class Cc(Type):
     def __init__(self, value, cont):
         self.value = value
@@ -52,6 +66,9 @@ def entry_point(argv):
 
     ccf = Cc(val_f, print_result)
     ccf.run()
+
+    ccb = Cc(true, print_result)
+    ccb.run()
 
     return 0
 
