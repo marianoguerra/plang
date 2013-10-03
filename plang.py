@@ -40,6 +40,14 @@ class Bool(Type):
         else:
             return "false"
 
+class Str(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def __str__(self):
+        return '"%s"' % self.value
+
 true = Bool(True)
 false = Bool(False)
 
@@ -69,6 +77,9 @@ def entry_point(argv):
 
     ccb = Cc(true, print_result)
     ccb.run()
+
+    ccs = Cc(Str("hi there"), print_result)
+    ccs.run()
 
     return 0
 
