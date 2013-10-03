@@ -56,6 +56,17 @@ class Keyword(Type):
     def __str__(self):
         return ':%s' % self.value
 
+class Symbol(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def __str__(self):
+        return '%s' % self.value
+
+    def eval(self, cc):
+        return cc.resolve(Int(42))
+
 true = Bool(True)
 false = Bool(False)
 
@@ -91,6 +102,9 @@ def entry_point(argv):
 
     cck = Cc(Keyword("hi-there"), print_result)
     cck.run()
+
+    ccs = Cc(Symbol("answer"), print_result)
+    ccs.run()
 
     return 0
 
