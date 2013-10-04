@@ -80,6 +80,7 @@ class Nil(Type):
     def __init__(self, value):
         Type.__init__(self)
         self.value = None
+        self.next = None
 
     def __str__(self):
         return "nil"
@@ -173,7 +174,8 @@ class Pair(Type):
         self.next = right
 
     def __str__(self):
-        return "(%s . %s)" % (self.value.__str__(), self.next.__str__())
+        #return "(%s . %s)" % (self.value, self.next)
+        return "(%s)" % " ".join([item.__str__() for item in self])
 
     def eval(self, cc):
         if cc.do_run:
@@ -183,6 +185,26 @@ class Pair(Type):
         else:
             resolver = LeftPairResolver(self, cc)
             return resolver.step()
+
+    def __iter__(self):
+        pair = self
+        while True:
+            cur = pair.value
+            yield cur
+            if pair.next == nil:
+                break
+            else:
+                pair = pair.next
+                if not isinstance(pair, Pair):
+                    break
+
+    def extend(self, iterable):
+        cur = nil
+        for item in reversed(iterables):
+            cur = Pair(item, cur)
+
+        return cur
+
 
 class Str(Type):
     def __init__(self, value):
