@@ -65,6 +65,70 @@ class Bool(Type):
         else:
             return "false"
 
+class Nil(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = None
+
+    def __str__(self):
+        return "nil"
+
+nil = Nil(None)
+
+class Fn(Type):
+    def call(self, args, cc):
+        print "Called fn with args:", args.__str__()
+        return cc.resolve(Int(42))
+
+class CallableExpected(Error):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return '(CallableExpected %s)' % self.value.__str__()
+
+class ResultHandler(object):
+    def __init__(self, value=nil):
+        self.value = value
+
+    def on_result(self, result):
+        print "result:", result.__str__()
+
+
+class RightPairResolver(ResultHandler):
+    def __init__(self, left_val, cc):
+        ResultHandler.__init__(self, left_val)
+        self.cc = cc
+
+    def on_result(self, right_val):
+        return self.cc.resolve(Pair(self.value, right_val))
+
+class LeftPairResolver(ResultHandler):
+    def __init__(self, pair, cc):
+        ResultHandler.__init__(self)
+        self.pair = pair
+        self.cc = cc
+
+    def on_result(self, left_val):
+        right_resolver = RightPairResolver(left_val, self.cc)
+        return Cc(self.pair.next, right_resolver, self.cc.env)
+
+    def run(self):
+        return Cc(self.pair.value, self, self.cc.env)
+
+class Pair(Type):
+    def __init__(self, left, right=nil):
+        Type.__init__(self)
+        self.value = left
+        self.next = right
+
+    def __str__(self):
+        return "(%s . %s)" % (self.value.__str__(), self.next.__str__())
+
+    def eval(self, cc):
+        resolver = LeftPairResolver(self, cc)
+        return resolver.run()
+
 class Str(Type):
     def __init__(self, value):
         Type.__init__(self)
@@ -102,16 +166,22 @@ class Cc(Type):
         self.cont = cont
         self.env = env
 
-    def run(self):
+    def step(self):
         return self.value.eval(self)
 
-    def resolve(self, value):
-        return self.cont(value)
+    def run(self):
+        result = self.step()
+        while isinstance(result, Cc):
+            result = result.step()
 
-def print_result(result):
-    print "result:", result.__str__()
+        return result
+
+    def resolve(self, value):
+        return self.cont.on_result(value)
 
 def entry_point(argv):
+    print_result = ResultHandler()
+
     root = Env({"name": Keyword("bob")})
     env = Env({"answer": Int(42)}, root)
     val_i = Int(42)
@@ -125,6 +195,9 @@ def entry_point(argv):
 
     ccb = Cc(true, print_result, env)
     ccb.run()
+
+    ccn = Cc(nil, print_result, env)
+    ccn.run()
 
     ccs = Cc(Str("hi there"), print_result, env)
     ccs.run()
@@ -143,6 +216,10 @@ def entry_point(argv):
         ccs2.run()
     except UnboundVariable as error:
         print "Error:", error.__str__()
+
+    ccp = Cc(Pair(Int(1), Pair(Symbol("answer"), Pair(Symbol("name"), nil))),
+            print_result, env)
+    ccp.run()
 
     return 0
 
