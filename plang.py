@@ -22,6 +22,14 @@ class UnboundVariable(Error):
     def __str__(self):
         return '(UnboundVariable "%s")' % self.name
 
+class TypeError(Error):
+    def __init__(self, reason, value):
+        self.reason = reason
+        self.value = value
+
+    def __str__(self):
+        return '(TypeError "%s" %s)' % (self.reason, self.value)
+
 class Env(Type):
     def __init__(self, bindings, parent=None):
         self.bindings = bindings
@@ -37,6 +45,9 @@ class Env(Type):
                 return self.parent.get(name)
         else:
             return result
+
+    def __str__(self):
+        return '<Env>'
 
 class Int(Type):
     def __init__(self, value):
@@ -76,9 +87,31 @@ class Nil(Type):
 nil = Nil(None)
 
 class Fn(Type):
+    def __init__(self, name="<lambda>"):
+        Type.__init__(self)
+        self.name = name
+
     def call(self, args, cc):
         print "Called fn with args:", args.__str__()
         return cc.resolve(Int(42))
+
+    def __str__(self):
+        return '(fn %s)' % self.name
+
+class FnPrint(Fn):
+    def __init__(self):
+        Fn.__init__(self, "println")
+
+    def call(self, args, cc):
+        print args.__str__()
+        return cc.resolve(nil)
+
+class FnList(Fn):
+    def __init__(self):
+        Fn.__init__(self, "list")
+
+    def call(self, args, cc):
+        return cc.resolve(args)
 
 class CallableExpected(Error):
     def __init__(self, value):
@@ -94,18 +127,20 @@ class ResultHandler(object):
     def on_result(self, result):
         print "result:", result.__str__()
 
+class PairResolver(ResultHandler):
+    pass
 
-class RightPairResolver(ResultHandler):
+class RightPairResolver(PairResolver):
     def __init__(self, left_val, cc):
-        ResultHandler.__init__(self, left_val)
+        PairResolver.__init__(self, left_val)
         self.cc = cc
 
     def on_result(self, right_val):
         return self.cc.resolve(Pair(self.value, right_val))
 
-class LeftPairResolver(ResultHandler):
+class LeftPairResolver(PairResolver):
     def __init__(self, pair, cc):
-        ResultHandler.__init__(self)
+        PairResolver.__init__(self)
         self.pair = pair
         self.cc = cc
 
@@ -113,8 +148,23 @@ class LeftPairResolver(ResultHandler):
         right_resolver = RightPairResolver(left_val, self.cc)
         return Cc(self.pair.next, right_resolver, self.cc.env)
 
-    def run(self):
+    def step(self):
         return Cc(self.pair.value, self, self.cc.env)
+
+class PairRunner(ResultHandler):
+    def __init__(self, cc):
+        ResultHandler.__init__(self)
+        self.cc = cc
+
+    def on_result(self, pair):
+        if isinstance(pair, Pair):
+            fn = pair.value
+            if isinstance(fn, Fn):
+                return fn.call(pair.next, self.cc)
+            else:
+                raise CallableExpected(fn)
+        else:
+            raise TypeError("Expected pair", pair)
 
 class Pair(Type):
     def __init__(self, left, right=nil):
@@ -126,8 +176,13 @@ class Pair(Type):
         return "(%s . %s)" % (self.value.__str__(), self.next.__str__())
 
     def eval(self, cc):
-        resolver = LeftPairResolver(self, cc)
-        return resolver.run()
+        if cc.do_run:
+            run_cc = Cc(None, PairRunner(cc), cc.env)
+            resolver = LeftPairResolver(self, run_cc)
+            return resolver.step()
+        else:
+            resolver = LeftPairResolver(self, cc)
+            return resolver.step()
 
 class Str(Type):
     def __init__(self, value):
@@ -161,10 +216,11 @@ true = Bool(True)
 false = Bool(False)
 
 class Cc(Type):
-    def __init__(self, value, cont, env):
+    def __init__(self, value, cont, env, do_run=False):
         self.value = value
         self.cont = cont
         self.env = env
+        self.do_run = do_run
 
     def step(self):
         return self.value.eval(self)
@@ -179,11 +235,15 @@ class Cc(Type):
     def resolve(self, value):
         return self.cont.on_result(value)
 
+    def __str__(self):
+        return '<Cc>'
+
 def entry_point(argv):
     print_result = ResultHandler()
 
     root = Env({"name": Keyword("bob")})
-    env = Env({"answer": Int(42)}, root)
+    env = Env({"answer": Int(42), "println": FnPrint(), "list": FnList()},
+            root)
     val_i = Int(42)
     val_f = Float(42.1)
 
@@ -217,9 +277,23 @@ def entry_point(argv):
     except UnboundVariable as error:
         print "Error:", error.__str__()
 
-    ccp = Cc(Pair(Int(1), Pair(Symbol("answer"), Pair(Symbol("name"), nil))),
-            print_result, env)
-    ccp.run()
+    ccp1 = Cc(
+            Pair(Symbol("println"),
+                Pair(Int(1),
+                    Pair(Symbol("answer"),
+                        Pair(Symbol("name"),
+                            nil)))),
+            print_result, env, True)
+    ccp1.run()
+
+    ccp2 = Cc(
+            Pair(Symbol("list"),
+                Pair(Int(1),
+                    Pair(Symbol("answer"),
+                        Pair(Symbol("name"),
+                            nil)))),
+            print_result, env, True)
+    ccp2.run()
 
     return 0
 
