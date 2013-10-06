@@ -227,7 +227,11 @@ class Cc(Fn):
         return '<Cc>'
 
     def call(self, value, cc):
-        return cc.resolve(value.value)
+        if isinstance(value, Pair):
+            return cc.resolve(value.value)
+        else:
+            # shouldn't happen, but pypy doesn't like it
+            return cc.resolve(value)
 
 class Tagged(Type):
     def __init__(self, tag, value):

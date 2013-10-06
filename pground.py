@@ -22,11 +22,12 @@ def check_args(funname, args, types):
             funname, typelen, arglen), args)
     else:
         for i in range(typelen):
-            argtype = types[i]
+            argtype = types[i][0]
+            argtypename = types[i][1]
             arg = arglist[i]
             if not isinstance(arg, argtype):
                 raise TypeError("%s expected arg %d to be of type %s" % (
-                    funname, i, argtype.__init__()), args)
+                    funname, i, argtypename), args)
 
     return arglist
 
@@ -35,7 +36,7 @@ class CallCc(Fn):
         Fn.__init__(self, "call-cc")
 
     def call(self, args, cc):
-        arglist = check_args(self.name, args, [Fn])
+        arglist = check_args(self.name, args, [(Fn, "Fn")])
         fn = arglist[0]
         return fn.call(Pair(cc, nil), cc)
 
