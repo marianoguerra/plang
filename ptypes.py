@@ -117,7 +117,9 @@ class PFn(Fn):
             holder = ResultHolder()
             for expr in self.body:
                 expr_cc = Cc(expr, holder, cc.env)
-                expr.eval(cc).run()
+                cc1 = expr.eval(expr_cc)
+                if cc1 is not None:
+                    cc1.run()
 
             return cc.resolve(holder.result)
 
@@ -283,7 +285,10 @@ def expand_pair(pair, env):
     while pair != nil:
         # XXX reuse same Cc?
         cc = Cc(pair, holder, env, False)
-        cc.run()
+
+        if cc is not None:
+            cc.run()
+
         res = holder.result
         # this check is kind of pointless, but trying to make pypy work
         if isinstance(res, Pair):

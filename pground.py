@@ -56,6 +56,8 @@ class OpDo(Operative):
         holder = ResultHolder()
         for expr in args:
             expr_cc = Cc(expr, holder, cc.env)
-            expr.eval(cc).run()
+            cc1 = expr.eval(expr_cc)
+            if cc1 is not None:
+                cc1.run()
 
         return cc.resolve(holder.result)
