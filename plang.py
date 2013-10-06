@@ -11,7 +11,7 @@ def entry_point(argv):
 
     print_result = ResultHandler()
 
-    root = Env({"name": Keyword("bob")})
+    root = Env({"name": Keyword("bob"), "def": OpDef()})
     env = Env({"answer": Int(42), "println": FnPrint(), "list": FnList()},
             root)
 
