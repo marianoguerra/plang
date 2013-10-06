@@ -23,7 +23,7 @@ lg.add("colon", r":")
 lg.add("symbol", SYMBOL_RE)
 lg.add("string", r'"(\\\^.|\\.|[^\"])*"')
 
-lg.ignore(r"[\s,\n]+")
+lg.ignore(r"[\s,\r\n\t]+")
 lg.ignore(r";.*\n")
 
 lexer = lg.build()
