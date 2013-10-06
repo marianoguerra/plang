@@ -237,7 +237,7 @@ class ResultHandler(object):
         self.value = value
 
     def on_result(self, result):
-        print "Res: %s" % result.__str__()
+        pass
 
 class PairResolver(ResultHandler):
     pass

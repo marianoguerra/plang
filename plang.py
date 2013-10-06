@@ -15,7 +15,7 @@ def entry_point(argv):
         print "Error reading code at line: %d column: %d" % (pos.lineno, pos.colno)
         return -1
 
-    print_result = ResultHandler()
+    holder = ResultHolder()
 
     root = Env({"name": Keyword("bob"), "def": OpDef(), "do": OpDo()})
     env = Env({"answer": Int(42), "println": FnPrint(), "list": FnList()},
@@ -23,8 +23,12 @@ def entry_point(argv):
 
     try:
         print "In:  %s" % input_parsed.__str__()
-        cc = Cc(input_parsed, print_result, env)
+        cc = Cc(input_parsed, holder, env)
         cc.run()
+
+        if isinstance(holder.result, Type):
+            print "Out: %s" % holder.result.__str__()
+
     except Exception as error:
         print "Error: %s" % error
 
