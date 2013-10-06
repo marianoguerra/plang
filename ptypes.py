@@ -100,15 +100,18 @@ class PFn(Fn):
         self.body = body
 
     def call(self, args, cc):
-        earglist = list(args)
+        earglist = args.to_list()
         earglen = len(earglist)
-        arglistlen = len(list(self.arglist))
+        larglist = self.arglist.to_list()
+        arglistlen = len(larglist)
 
         if earglen != arglistlen:
             raise TypeError("Expected %d arguments in %s, got %d" % (
-                arglistlen, self.name, earglen), args.__str__())
+                arglistlen, self.name, earglen), args)
         else:
-            for argname, argval in zip(self.arglist, earglist):
+            for i in range(arglistlen):
+                argname = larglist[i]
+                argval = earglist[i]
                 cc.env.set(argname.__str__(), argval)
 
             holder = ResultHolder()
@@ -149,6 +152,9 @@ class Pair(Type):
                 pair = pair.next
                 if not isinstance(pair, Pair):
                     break
+
+    def to_list(self):
+        return [item for item in self]
 
 def pair_from_iter(iterable):
     items = list(iterable)
@@ -275,11 +281,17 @@ def expand_pair(pair, env):
     holder = ResultHolder()
 
     while pair != nil:
+        # XXX reuse same Cc?
         cc = Cc(pair, holder, env, False)
         cc.run()
-        left = holder.result.value
-        result.append(left)
-        pair = pair.next
+        res = holder.result
+        # this check is kind of pointless, but trying to make pypy work
+        if isinstance(res, Pair):
+            left = res.value
+            result.append(left)
+            pair = pair.next
+        else:
+            raise TypeError("Expected pair, got %s" % res.__str__(), res)
 
 
     epair = nil

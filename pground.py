@@ -1,12 +1,13 @@
-from ptypes import Fn, nil, Operative, PFn, Symbol, Pair
+from ptypes import Fn, nil, Operative, PFn, Symbol, Pair, TypeError
 
 class FnPrint(Fn):
     def __init__(self):
         Fn.__init__(self, "println")
 
     def call(self, args, cc):
-        for arg in args:
-            print arg,
+        arglist = args.to_list()
+        for arg in arglist:
+            print arg.__str__(),
         print
 
         return cc.resolve(nil)
@@ -24,22 +25,22 @@ class OpDef(Operative):
         Operative.__init__(self, "def")
 
     def call(self, args, cc):
-        arglist = list(args)
+        arglist = args.to_list()
         arglen = len(arglist)
 
         if arglen < 2:
             raise TypeError("%s expected at least 2 arguments, got %d" % (
-                self.name, arglen))
+                self.name, arglen), args)
         else:
             name = arglist[0]
             funargs = arglist[1]
             body = arglist[2:]
 
             if not isinstance(name, Symbol):
-                raise TypeError("function name expected to be a symbol, got %s" % (name.__str__()))
+                raise TypeError("function name expected to be a symbol, got %s" % (name.__str__()), name)
 
             if not isinstance(funargs, Pair):
-                raise TypeError("function args expected to be a list, got %s of type %s" % (funargs.__str__(), type(funargs)))
+                raise TypeError("function args expected to be a list, got %s" % funargs.__str__(), funargs)
 
             namestr = name.__str__()
             fn = PFn(namestr, funargs, body)
