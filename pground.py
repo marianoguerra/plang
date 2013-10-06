@@ -1,11 +1,14 @@
-from ptypes import Fn, nil
+from ptypes import Fn, nil, Operative, PFn, Symbol, Pair
 
 class FnPrint(Fn):
     def __init__(self):
         Fn.__init__(self, "println")
 
     def call(self, args, cc):
-        print args.__str__()
+        for arg in args:
+            print arg,
+        print
+
         return cc.resolve(nil)
 
 class FnList(Fn):
