@@ -30,6 +30,9 @@ class Env(Type):
         else:
             return result
 
+    def set(self, name, value):
+        self.bindings[name] = value
+
     def __str__(self):
         return '<Env>'
 
