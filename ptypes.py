@@ -131,7 +131,7 @@ class Pair(Type):
 
     def eval(self, cc):
         if cc.do_run:
-            run_cc = Cc(None, PairRunner(cc), cc.env)
+            run_cc = Cc(self.next, PairRunner(cc), cc.env)
             resolver = LeftPairResolver(self, run_cc)
             return resolver.step()
         else:
@@ -241,8 +241,7 @@ class LeftPairResolver(PairResolver):
         self.cc = cc
 
     def on_result(self, left_val):
-        right_resolver = RightPairResolver(left_val, self.cc)
-        return Cc(self.pair.next, right_resolver, self.cc.env, False)
+        return self.cc.cont.on_result(Pair(left_val, self.pair.next))
 
     def step(self):
         return Cc(self.pair.value, self, self.cc.env)
