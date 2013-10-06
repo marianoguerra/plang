@@ -297,8 +297,11 @@ class PairRunner(ResultHandler):
     def on_result(self, pair):
         if isinstance(pair, Pair):
             fn = pair.value
-            if isinstance(fn, Fn):
+            if isinstance(fn, Operative):
                 return fn.call(pair.next, self.cc)
+            elif isinstance(fn, Fn):
+                expanded_pair = expand_pair(pair.next, self.cc.env)
+                return fn.call(expanded_pair, self.cc)
             else:
                 raise CallableExpected(fn)
         else:
