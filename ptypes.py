@@ -246,13 +246,48 @@ class LeftPairResolver(PairResolver):
     def step(self):
         return Cc(self.pair.value, self, self.cc.env)
 
-class RightPairResolver(PairResolver):
-    def __init__(self, left_val, cc):
-        PairResolver.__init__(self, left_val)
+class PairExpander(PairResolver):
+    def __init__(self, pair, cc):
+        PairResolver.__init__(self, pair)
         self.cc = cc
 
-    def on_result(self, right_val):
-        return self.cc.resolve(Pair(self.value, right_val))
+    def on_result(self, left_val):
+        if self.pair.next == nil:
+            return self.cc.resolve(Pair(left_val, nil))
+        else:
+            return Cc(self.pair.next.value,
+                    PairExpander(self.pair.next.next, self.cc),
+                    self.cc.env, False)
+
+    def step(self):
+        return Cc(self.value.value, self, self.cc.env)
+
+class ResultHolder(ResultHandler):
+    def __init__(self):
+        ResultHandler.__init__(self)
+        self.result = nil
+
+    def on_result(self, result):
+        self.result = result
+
+def expand_pair(pair, env):
+    result = []
+    holder = ResultHolder()
+
+    while pair != nil:
+        cc = Cc(pair, holder, env, False)
+        cc.run()
+        left = holder.result.value
+        result.append(left)
+        pair = pair.next
+
+
+    epair = nil
+    for item in reversed(result):
+        epair = Pair(item, epair)
+
+    return epair
+
 
 class PairRunner(ResultHandler):
     def __init__(self, cc):
