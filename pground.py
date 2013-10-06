@@ -1,4 +1,4 @@
-from ptypes import Fn, nil, Operative, PFn, Symbol, Pair, TypeError
+from ptypes import *
 
 class FnPrint(Fn):
     def __init__(self):
@@ -47,3 +47,15 @@ class OpDef(Operative):
 
             cc.env.set(namestr, fn)
             return cc.resolve(fn)
+
+class OpDo(Operative):
+    def __init__(self):
+        Operative.__init__(self, "do")
+
+    def call(self, args, cc):
+        holder = ResultHolder()
+        for expr in args:
+            expr_cc = Cc(expr, holder, cc.env)
+            expr.eval(cc).run()
+
+        return cc.resolve(holder.result)

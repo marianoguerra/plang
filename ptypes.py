@@ -117,7 +117,7 @@ class PFn(Fn):
             holder = ResultHolder()
             for expr in self.body:
                 expr_cc = Cc(expr, holder, cc.env)
-                expr.eval(cc)
+                expr.eval(cc).run()
 
             return cc.resolve(holder.result)
 
@@ -292,7 +292,6 @@ def expand_pair(pair, env):
             pair = pair.next
         else:
             raise TypeError("Expected pair, got %s" % res.__str__(), res)
-
 
     epair = nil
     for item in reversed(result):
