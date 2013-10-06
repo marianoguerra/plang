@@ -74,17 +74,50 @@ class Nil(Type):
 
 nil = Nil(None)
 
+class Operative(Type):
+    def __init__(self, name):
+        Type.__init__(self)
+        self.name = name
+
+    def call(self, args, cc):
+        raise NotImplementedError("operative %s not implemented" % self.name)
+
 class Fn(Type):
     def __init__(self, name="<lambda>"):
         Type.__init__(self)
         self.name = name
 
     def call(self, args, cc):
-        print "Called fn with args:", args.__str__()
-        return cc.resolve(Int(42))
+        raise NotImplementedError("fn %s not implemented" % self.name)
 
     def __str__(self):
         return '(fn %s)' % self.name
+
+class PFn(Fn):
+    def __init__(self, name, arglist, body):
+        Fn.__init__(self, name)
+        self.arglist = arglist
+        self.body = body
+
+    def call(self, args, cc):
+        earglist = list(args)
+        earglen = len(earglist)
+        arglistlen = len(list(self.arglist))
+
+        if earglen != arglistlen:
+            raise TypeError("Expected %d arguments in %s, got %d" % (
+                arglistlen, self.name, earglen), args.__str__())
+        else:
+            for argname, argval in zip(self.arglist, earglist):
+                cc.env.set(argname.__str__(), argval)
+
+            holder = ResultHolder()
+            for expr in self.body:
+                expr_cc = Cc(expr, holder, cc.env)
+                expr.eval(cc)
+
+            return cc.resolve(holder.result)
+
 
 class Pair(Type):
     def __init__(self, left, right=nil):
