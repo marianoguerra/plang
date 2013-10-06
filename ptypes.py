@@ -116,13 +116,12 @@ class PFn(Fn):
 
             holder = ResultHolder()
             for expr in self.body:
-                expr_cc = Cc(expr, holder, cc.env)
+                expr_cc = Cc(expr, holder, cc.env, cc)
                 cc1 = expr.eval(expr_cc)
                 if cc1 is not None:
                     cc1.run()
 
             return cc.resolve(holder.result)
-
 
 class Pair(Type):
     def __init__(self, left, right=nil):
@@ -136,7 +135,7 @@ class Pair(Type):
 
     def eval(self, cc):
         if cc.do_run:
-            run_cc = Cc(self.next, PairRunner(cc), cc.env)
+            run_cc = Cc(self.next, PairRunner(cc), cc.env, cc)
             resolver = LeftPairResolver(self, run_cc)
             return resolver.step()
         else:
@@ -198,12 +197,13 @@ class Symbol(Type):
 true = Bool(True)
 false = Bool(False)
 
-class Cc(Type):
-    def __init__(self, value, cont, env, do_run=True):
+class Cc(Fn):
+    def __init__(self, value, cont, env, parent, do_run=True):
         self.value = value
         self.cont = cont
         self.env = env
         self.do_run = do_run
+        self.parent = parent
 
     def step(self):
         return self.value.eval(self)
@@ -220,6 +220,9 @@ class Cc(Type):
 
     def __str__(self):
         return '<Cc>'
+
+    def call(self, value, cc):
+        return cc.resolve(value.value)
 
 class Tagged(Type):
     def __init__(self, tag, value):
@@ -252,7 +255,7 @@ class LeftPairResolver(PairResolver):
         return self.cc.cont.on_result(Pair(left_val, self.pair.next))
 
     def step(self):
-        return Cc(self.pair.value, self, self.cc.env)
+        return Cc(self.pair.value, self, self.cc.env, self.cc)
 
 class PairExpander(PairResolver):
     def __init__(self, pair, cc):
@@ -265,10 +268,10 @@ class PairExpander(PairResolver):
         else:
             return Cc(self.pair.next.value,
                     PairExpander(self.pair.next.next, self.cc),
-                    self.cc.env, False)
+                    self.cc.env, self.cc, False)
 
     def step(self):
-        return Cc(self.value.value, self, self.cc.env)
+        return Cc(self.value.value, self, self.cc.env, self.cc)
 
 class ResultHolder(ResultHandler):
     def __init__(self):
@@ -278,13 +281,13 @@ class ResultHolder(ResultHandler):
     def on_result(self, result):
         self.result = result
 
-def expand_pair(pair, env):
+def expand_pair(pair, env, parent_cc):
     result = []
     holder = ResultHolder()
 
     while pair != nil:
         # XXX reuse same Cc?
-        cc = Cc(pair, holder, env, False)
+        cc = Cc(pair, holder, env, parent_cc, False)
 
         if cc is not None:
             cc.run()
@@ -316,7 +319,7 @@ class PairRunner(ResultHandler):
             if isinstance(fn, Operative):
                 return fn.call(pair.next, self.cc)
             elif isinstance(fn, Fn):
-                expanded_pair = expand_pair(pair.next, self.cc.env)
+                expanded_pair = expand_pair(pair.next, self.cc.env, self.cc)
                 return fn.call(expanded_pair, self.cc)
             else:
                 raise CallableExpected(fn)

@@ -23,7 +23,7 @@ def entry_point(argv):
 
     try:
         print "In:  %s" % input_parsed.__str__()
-        cc = Cc(input_parsed, holder, env)
+        cc = Cc(input_parsed, holder, env, None)
         cc.run()
 
         if isinstance(holder.result, Type):
