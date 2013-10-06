@@ -72,6 +72,9 @@ class Nil(Type):
     def __str__(self):
         return "nil"
 
+    def to_list(self):
+        return []
+
 nil = Nil(None)
 
 class Operative(Type):
@@ -115,9 +118,11 @@ class PFn(Fn):
                 cc.env.set(argname.__str__(), argval)
 
             holder = ResultHolder()
+
             for expr in self.body:
                 expr_cc = Cc(expr, holder, cc.env, cc)
                 cc1 = expr.eval(expr_cc)
+
                 if cc1 is not None:
                     cc1.run()
 

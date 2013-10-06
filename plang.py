@@ -17,7 +17,13 @@ def entry_point(argv):
 
     holder = ResultHolder()
 
-    root = Env({"name": Keyword("bob"), "def": OpDef(), "do": OpDo()})
+    root = Env({
+        "name": Keyword("bob"),
+        "def": OpDef(),
+        "do": OpDo(),
+        "call-cc": CallCc()
+    })
+
     env = Env({"answer": Int(42), "println": FnPrint(), "list": FnList()},
             root)
 

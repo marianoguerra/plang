@@ -12,6 +12,33 @@ class FnPrint(Fn):
 
         return cc.resolve(nil)
 
+def check_args(funname, args, types):
+    arglist = args.to_list()
+    arglen = len(arglist)
+    typelen = len(types)
+
+    if arglen != typelen:
+        raise TypeError("%s expected at least %s arguments, got %d" % (
+            funname, typelen, arglen), args)
+    else:
+        for i in range(typelen):
+            argtype = types[i]
+            arg = arglist[i]
+            if not isinstance(arg, argtype):
+                raise TypeError("%s expected arg %d to be of type %s" % (
+                    funname, i, argtype.__init__()), args)
+
+    return arglist
+
+class CallCc(Fn):
+    def __init__(self):
+        Fn.__init__(self, "call-cc")
+
+    def call(self, args, cc):
+        arglist = check_args(self.name, args, [Fn])
+        fn = arglist[0]
+        return fn.call(Pair(cc, nil), cc)
+
 class FnList(Fn):
     def __init__(self):
         Fn.__init__(self, "list")
