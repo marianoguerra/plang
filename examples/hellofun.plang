@@ -1,7 +1,0 @@
-(def hello (name)
-    (println "hello" name)
-    42)
-
-(println (hello "bob"))
-
-1
