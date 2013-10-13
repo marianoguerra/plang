@@ -58,18 +58,26 @@ class HeadResolver(Resolver):
 
     def resolve(self, head):
         return Cc(self.val.tail, TailResolver(head, self.cc), self.cc.env,
-                False)
+                self.cc, False)
 
 
 class Type(BaseBox):
     def __init__(self):
         pass
 
-class Cc(Type):
-    def __init__(self, value, cont, env, do_run=True):
+class Callable(Type):
+    def __init__(self, name):
+        self.name = name
+
+    def call(self, args, cc):
+        return cc.resolve(nil)
+
+class Cc(Callable):
+    def __init__(self, value, cont, env, parent, do_run=True):
         self.value = value
         self.cont = cont
         self.env = env
+        self.parent = parent
         self.do_run = do_run
 
     def resolve(self, value):
@@ -84,6 +92,16 @@ class Cc(Type):
             result = result.step()
 
         return result
+
+    def eval(self, cc):
+        return cc.parent.resolve(self)
+
+    def call(self, args, _cc):
+        if isinstance(args, Pair) and args.length() == 1:
+            return self.resolve(args.head)
+        else:
+            msg = "expected on argument in cc, got %s"
+            raise PBadMatchError(msg % args.to_str())
 
 class Env(Type):
     def __init__(self, bindings, parent=None):
@@ -184,13 +202,6 @@ true = Bool(True)
 false = Bool(False)
 nil = Nil()
 
-class Callable(Type):
-    def __init__(self, name):
-        self.name = name
-
-    def call(self, args, cc):
-        return cc.resolve(nil)
-
 class Operative(Callable):
     def __init__(self, name):
         Callable.__init__(self, name)
@@ -202,10 +213,10 @@ class Operative(Callable):
         return "<applicative %s>" % self.name
 
 def expand_pair(pair, cc):
-    return Cc(pair, identity, cc.env, False).run()
+    return Cc(pair, identity, cc.env, cc, False).run()
 
 def peval(value, env):
-    return Cc(value, identity, env).run()
+    return Cc(value, identity, env, None).run()
 
 class Applicative(Callable):
     def __init__(self, name):
@@ -220,6 +231,28 @@ class Applicative(Callable):
 
     def to_str(self):
         return "<applicative %s>" % self.name
+
+class LeftResolver(Resolver):
+    def __init__(self, rest, cc, env):
+        self.rest = rest
+        self.cc = cc
+        self.env = env
+
+    def resolve(self, value):
+        if self.rest is nil:
+            return self.cc.resolve(value)
+        else:
+            return eval_seq_left(self.rest, self.cc, self.env)
+
+
+def eval_seq_left(pair, cc, env):
+    if pair is nil:
+        return cc.resolve(nil)
+    elif isinstance(pair, Pair):
+        return Cc(pair.head, LeftResolver(pair.tail, cc, env), env, cc)
+    else:
+        msg = "expected sequence of forms in body, got %s"
+        raise PBadMatchError(msg % pair.to_str())
 
 class Lambda(Applicative):
     def __init__(self, argnames, body):
@@ -248,18 +281,7 @@ class Lambda(Applicative):
             arg = arglist[i]
             env.set(argname, arg)
 
-        result = nil
-        body = self.body
-        if body is nil:
-            return cc.resolve(nil)
-        elif isinstance(body, Pair):
-            for expr in body:
-                result = Cc(expr, identity, env).run()
-        else:
-            msg = "expected sequence of forms in lambda body, got %s"
-            raise PBadMatchError(msg % self.body.to_str())
-
-        return cc.resolve(result)
+        return eval_seq_left(self.body, cc, env)
 
     def call(self, args, cc):
         eargs = expand_pair(args, cc)
@@ -281,17 +303,7 @@ class OpDo(Operative):
         Operative.__init__(self, "do")
 
     def call(self, args, cc):
-        if args is nil:
-            return cc.resolve(nil)
-        elif isinstance(args, Pair):
-            result = nil
-            for expr in args:
-                result = Cc(expr, identity, cc.env).run()
-
-            return cc.resolve(result)
-        else:
-            raise PBadMatchError("Expected sequence in do body, got %s" % (
-                args.to_str()))
+        return eval_seq_left(args, cc, cc.env)
 
 class OpDef(Operative):
     def __init__(self):
@@ -348,6 +360,22 @@ class FnDisplay(Applicative):
         print "display:", args.to_str()
         return cc.resolve(nil)
 
+class FnCallCc(Applicative):
+    def __init__(self):
+        Callable.__init__(self, "call-cc")
+
+    def handle(self, args, cc):
+        if isinstance(args, Pair) and args.length() == 1:
+            fn = args.head
+            if isinstance(fn, Callable):
+                return fn.call(cc, cc)
+            else:
+                msg = "Expected callable in call-cc, got %s"
+                raise PBadMatchError(msg % fn.to_str())
+        else:
+            msg = "Expected (callable) in call-cc, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
 class Pair(Type):
     def __init__(self, head, tail=nil):
         self.head = head
@@ -369,9 +397,9 @@ class Pair(Type):
 
     def eval(self, cc):
         if cc.do_run:
-            return Cc(self.head, CallResolver(self, cc), cc.env)
+            return Cc(self.head, CallResolver(self, cc), cc.env, cc)
         else:
-            return Cc(self.head, HeadResolver(self, cc), cc.env)
+            return Cc(self.head, HeadResolver(self, cc), cc.env, cc)
 
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])

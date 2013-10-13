@@ -32,11 +32,12 @@ def entry_point(argv):
         "do": OpDo(),
         "def": OpDef(),
         "lambda": OpLambda(),
+        "call-cc": FnCallCc(),
         "display": FnDisplay()
     })
 
 
-    print Cc(input_parsed, identity, env).run().to_str()
+    print Cc(input_parsed, identity, env, None).run().to_str()
 
     return 0
 
