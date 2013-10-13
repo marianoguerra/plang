@@ -2,6 +2,7 @@ import os
 import sys
 
 from ptypes import *
+from pground import GROUND
 import rply.parser
 
 import edn
@@ -26,17 +27,7 @@ def entry_point(argv):
         print "Error reading code at line: %d column: %d" % (pos.lineno, pos.colno)
         return -1
 
-    env = Env({
-        "version": Str("0.0.1"),
-        "dump": OpDump(),
-        "do": OpDo(),
-        "def": OpDef(),
-        "lambda": OpLambda(),
-        "call-cc": FnCallCc(),
-        "display": FnDisplay()
-    })
-
-
+    env = Env(GROUND)
     print Cc(input_parsed, identity, env, None).run().to_str()
 
     return 0
