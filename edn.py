@@ -10,7 +10,7 @@ from rply.token import BaseBox
 
 lg = LexerGenerator()
 
-SYMBOL_RE = r"[\.\*\/\+\!\-\_\?\$%&=a-zA-Z][\.\*\+\!\-\_\?\$%&=a-zA-Z0-9:#]*"
+SYMBOL_RE = r"[<>\.\*\/\+\!\-\_\?\$%&=a-zA-Z][<>\.\*\+\!\-\_\?\$%&=a-zA-Z0-9:#]*"
 
 lg.add("nil", r"nil")
 lg.add("true", r"true")

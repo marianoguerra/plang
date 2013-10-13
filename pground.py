@@ -179,6 +179,95 @@ class FnDiv(NumOp):
             msg = "Expected Int or Float, got %s"
             raise PBadMatchError(msg % value.to_str())
 
+class CompNumOp(Applicative):
+    def __init__(self, name, zero):
+        Applicative.__init__(self, name)
+        self.zero = zero
+
+    def handle(self, args, cc):
+        result = self.zero
+        last = 0
+        if args is nil:
+            return cc.resolve(self.zero)
+        elif isinstance(args, Pair):
+            if args.length() == 1:
+                return cc.resolve(true)
+
+            first = True
+            for item in args:
+
+                if isinstance(item, Int):
+                    if first:
+                        # ugly and may fail
+                        last = item.value
+                        first = False
+                        continue
+
+                    result = self.calculate(last, item.value)
+                # duplication for pypy
+                elif isinstance(item, Float):
+                    if first:
+                        last = item.value
+                        first = False
+                        continue
+
+                    result = self.calculate(last, item.value)
+                else:
+                    msg = "Expected Int or Float, got %s"
+                    raise PBadMatchError(msg % item.to_str())
+
+                first = False
+
+                if not result:
+                    return cc.resolve(false)
+
+            return cc.resolve(true)
+        else:
+            msg = "Expected Pair, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
+class OpLt(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "<", true)
+
+    def calculate(self, last, current):
+        return last < current
+
+class OpGt(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, ">", true)
+
+    def calculate(self, last, current):
+        return last > current
+
+class OpLe(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "<=", true)
+
+    def calculate(self, last, current):
+        return last <= current
+
+class OpGe(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, ">=", true)
+
+    def calculate(self, last, current):
+        return last >= current
+
+class OpEq(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "==", true)
+
+    def calculate(self, last, current):
+        return last == current
+
+class OpNe(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "!=", true)
+
+    def calculate(self, last, current):
+        return last != current
+
 GROUND = {
     "dump": OpDump(),
     "do": OpDo(),
@@ -186,8 +275,17 @@ GROUND = {
     "lambda": OpLambda(),
     "call-cc": FnCallCc(),
     "display": FnDisplay(),
+
     "+": FnAdd(),
     "-": FnSub(),
     "*": FnMul(),
-    "/": FnDiv()
+    "/": FnDiv(),
+
+    "<": OpLt(),
+    ">": OpGt(),
+    "<=": OpLe(),
+    ">=": OpGe(),
+    "==": OpEq(),
+    "!=": OpNe()
 }
+
