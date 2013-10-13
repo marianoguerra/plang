@@ -86,15 +86,19 @@ class Cc(Type):
         return result
 
 class Env(Type):
-    def __init__(self, bindings):
+    def __init__(self, bindings, parent=None):
         self.value = None
         self.bindings = bindings
+        self.parent = parent
 
     def get(self, name):
         # dict.get must take the two args
         result = self.bindings.get(name, None)
         if result is None:
-            raise PUnboundError("'%s' not bound" % name, name, self)
+            if self.parent is None:
+                raise PUnboundError("'%s' not bound" % name, name, self)
+            else:
+                return self.parent.get(name)
 
         return result
 
@@ -191,6 +195,9 @@ class Operative(Callable):
     def call(self, args, cc):
         return cc.resolve(nil)
 
+    def to_str(self):
+        return "<applicative %s>" % self.name
+
 def expand_pair(pair, cc):
     cc1 = Cc(nil, identity, cc.env, False)
     return pair.eval(cc1).run()
@@ -205,6 +212,41 @@ class Applicative(Callable):
     def call(self, args, cc):
         eargs = expand_pair(args, cc)
         return self.handle(eargs, cc)
+
+    def to_str(self):
+        return "<applicative %s>" % self.name
+
+class Lambda(Applicative):
+    def __init__(self, argnames, body):
+        Applicative.__init__(self, "<lambda>")
+        self.body = body
+        self.argnames = argnames
+
+    def handle(self, args, cc):
+        env = Env({}, cc.env)
+
+        # pypy doesn't like list(args)
+        arglist = [item for item in args]
+        args_len = len(arglist)
+        argnames_len = len(self.argnames)
+
+        if args_len != argnames_len:
+            raise PBadMatchError("expected %d arguments, got %d" % (
+                argnames_len, args_len))
+
+        for i in range(args_len):
+            argname = self.argnames[i]
+            arg = arglist[i]
+            env.set(argname, arg)
+
+        result = nil
+        for expr in self.body:
+            result = Cc(expr, identity, env).run()
+
+        return cc.resolve(result)
+
+    def to_str(self):
+        return "<lambda>"
 
 class OpDump(Operative):
     def __init__(self):
@@ -230,7 +272,8 @@ class OpDef(Operative):
         Operative.__init__(self, "def")
 
     def call(self, args, cc):
-        if isinstance(args, Pair) and args.length() == 2 and isinstance(args.head, Symbol):
+        if (isinstance(args, Pair) and args.length() == 2 and
+                isinstance(args.head, Symbol)):
             sym = args.head
             name = sym.to_str()
             value_pair = expand_pair(args.tail, cc)
@@ -245,6 +288,24 @@ class OpDef(Operative):
 
         else:
             raise PBadMatchError("expected (symbol value), got %s" % args.to_str())
+
+class OpLambda(Operative):
+    def __init__(self):
+        Operative.__init__(self, "lambda")
+
+    def call(self, args, cc):
+        if (isinstance(args, Pair) and
+                isinstance(args.head, Pair)):
+
+            param_names = args.head
+            params = []
+            for param_name in param_names:
+                if not isinstance(param_name, Symbol):
+                    raise PBadMatchError("Expected symbol in lambda param name, got %s" % param_name.to_str())
+                else:
+                    params.append(param_name.value)
+
+            return cc.resolve(Lambda(params, args.tail))
 
 class FnDisplay(Applicative):
     def __init__(self):

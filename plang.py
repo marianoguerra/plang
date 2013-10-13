@@ -31,6 +31,7 @@ def entry_point(argv):
         "dump": OpDump(),
         "do": OpDo(),
         "def": OpDef(),
+        "lambda": OpLambda(),
         "display": FnDisplay()
     })
 
