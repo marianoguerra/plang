@@ -20,7 +20,7 @@ def readinput():
 def entry_point(argv):
     input_data = readinput()
     try:
-        input_parsed = edn.loads(input_data)
+        input_parsed = edn.loads("(do %s)" % input_data)
     except rply.parser.ParsingError as error:
         pos = error.getsourcepos()
         print "Error reading code at line: %d column: %d" % (pos.lineno, pos.colno)

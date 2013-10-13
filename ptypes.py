@@ -154,6 +154,9 @@ class Nil(Type):
     def to_str(self):
         return "nil"
 
+    def __iter__(self):
+        return iter([])
+
 class Symbol(Type):
     # if not redefined it doesn't compile
     def __init__(self, value):
@@ -199,8 +202,10 @@ class Operative(Callable):
         return "<applicative %s>" % self.name
 
 def expand_pair(pair, cc):
-    cc1 = Cc(nil, identity, cc.env, False)
-    return pair.eval(cc1).run()
+    return Cc(pair, identity, cc.env, False).run()
+
+def peval(value, env):
+    return Cc(value, identity, env).run()
 
 class Applicative(Callable):
     def __init__(self, name):
@@ -223,6 +228,10 @@ class Lambda(Applicative):
         self.argnames = argnames
 
     def handle(self, args, cc):
+        if not isinstance(args, Pair):
+            msg = "Expected sequence for function arguments, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
         env = Env({}, cc.env)
 
         # pypy doesn't like list(args)
@@ -240,10 +249,21 @@ class Lambda(Applicative):
             env.set(argname, arg)
 
         result = nil
-        for expr in self.body:
-            result = Cc(expr, identity, env).run()
+        body = self.body
+        if body is nil:
+            return cc.resolve(nil)
+        elif isinstance(body, Pair):
+            for expr in body:
+                result = Cc(expr, identity, env).run()
+        else:
+            msg = "expected sequence of forms in lambda body, got %s"
+            raise PBadMatchError(msg % self.body.to_str())
 
         return cc.resolve(result)
+
+    def call(self, args, cc):
+        eargs = expand_pair(args, cc)
+        return self.handle(eargs, cc)
 
     def to_str(self):
         return "<lambda>"
@@ -261,11 +281,17 @@ class OpDo(Operative):
         Operative.__init__(self, "do")
 
     def call(self, args, cc):
-        result = nil
-        for expr in args:
-            result = Cc(expr, identity, cc.env).run()
+        if args is nil:
+            return cc.resolve(nil)
+        elif isinstance(args, Pair):
+            result = nil
+            for expr in args:
+                result = Cc(expr, identity, cc.env).run()
 
-        return cc.resolve(result)
+            return cc.resolve(result)
+        else:
+            raise PBadMatchError("Expected sequence in do body, got %s" % (
+                args.to_str()))
 
 class OpDef(Operative):
     def __init__(self):
@@ -276,36 +302,43 @@ class OpDef(Operative):
                 isinstance(args.head, Symbol)):
             sym = args.head
             name = sym.to_str()
-            value_pair = expand_pair(args.tail, cc)
+            tail = args.tail
 
-            if isinstance(value_pair, Pair):
-                value = value_pair.head
+            if isinstance(tail, Pair):
+                value = peval(tail.head, cc.env)
                 cc.env.set(name, value)
                 return cc.resolve(value)
             else:
-                # shouldn't happen, just to make pypy happy
-                raise PBadMatchError("expected (symbol value), got %s" % args.to_str())
+                msg = "expected (symbol value), got %s"
+                raise PBadMatchError(msg % args.to_str())
 
         else:
-            raise PBadMatchError("expected (symbol value), got %s" % args.to_str())
+            msg = "expected (symbol value), got %s"
+            raise PBadMatchError(msg % args.to_str())
 
 class OpLambda(Operative):
     def __init__(self):
         Operative.__init__(self, "lambda")
 
     def call(self, args, cc):
-        if (isinstance(args, Pair) and
-                isinstance(args.head, Pair)):
-
+        if isinstance(args, Pair):
             param_names = args.head
+            if not isinstance(param_names, Pair):
+                msg = "Expected List of symbols as params, got %s"
+                raise PBadMatchError(msg % param_names.to_str())
+
             params = []
             for param_name in param_names:
                 if not isinstance(param_name, Symbol):
-                    raise PBadMatchError("Expected symbol in lambda param name, got %s" % param_name.to_str())
+                    msg = "Expected symbol in lambda param name, got %s"
+                    raise PBadMatchError(msg % param_name.to_str())
                 else:
                     params.append(param_name.value)
 
             return cc.resolve(Lambda(params, args.tail))
+        else:
+            msg = "Expected lambda params to be ((*args) *body), got %s"
+            raise PBadMatchError(msg % args.to_str())
 
 class FnDisplay(Applicative):
     def __init__(self):
@@ -338,7 +371,7 @@ class Pair(Type):
         if cc.do_run:
             return Cc(self.head, CallResolver(self, cc), cc.env)
         else:
-            return Cc(self.head, HeadResolver(self, cc), cc.env, False)
+            return Cc(self.head, HeadResolver(self, cc), cc.env)
 
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])
