@@ -161,7 +161,7 @@ class Str(Type):
         return cc.resolve(self)
 
     def to_str(self):
-        return '"%s"' % self.value
+        return '%s' % self.value
 
 true = Bool(True)
 false = Bool(False)
