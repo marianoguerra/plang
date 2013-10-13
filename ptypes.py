@@ -195,11 +195,21 @@ class Applicative(Callable):
 
 class OpDump(Operative):
     def __init__(self):
-        Callable.__init__(self, "dump")
+        Operative.__init__(self, "dump")
 
     def call(self, args, cc):
         print "dump:", args.to_str()
         return cc.resolve(nil)
+
+class OpDo(Operative):
+    def __init__(self):
+        Operative.__init__(self, "do")
+
+    def call(self, args, cc):
+        for expr in args:
+            result = Cc(expr, identity, cc.env).run()
+
+        return cc.resolve(result)
 
 class FnDisplay(Applicative):
     def __init__(self):

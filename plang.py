@@ -29,6 +29,7 @@ def entry_point(argv):
     env = Env({
         "version": Str("0.0.1"),
         "dump": OpDump(),
+        "do": OpDo(),
         "display": FnDisplay()
     })
 
