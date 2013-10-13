@@ -15,6 +15,9 @@ class PCallableExpectedError(PError):
         self.msg = msg
         self.value = value
 
+    def __str__(self):
+        return "%s: %s" % (self.msg, self.value.to_str())
+
 class Resolver(object):
     def resolve(self, value):
         return value
@@ -30,15 +33,34 @@ class CallResolver(Resolver):
         else:
             raise PCallableExpectedError("Callable expected", value)
 
+class TailResolver(Resolver):
+    def __init__(self, val, cc):
+        self.val = val
+        self.cc = cc
+
+    def resolve(self, tail):
+        return self.cc.resolve(Pair(self.val, tail))
+
+class HeadResolver(Resolver):
+    def __init__(self, val, cc):
+        self.val = val
+        self.cc = cc
+
+    def resolve(self, head):
+        return Cc(self.val.tail, TailResolver(head, self.cc), self.cc.env,
+                False)
+
+
 class Type(object):
     def __init__(self):
         pass
 
 class Cc(Type):
-    def __init__(self, value, cont, env):
+    def __init__(self, value, cont, env, do_run=True):
         self.value = value
         self.cont = cont
         self.env = env
+        self.do_run = do_run
 
     def resolve(self, value):
         return self.cont.resolve(value)
@@ -156,12 +178,32 @@ class Operative(Callable):
     def call(self, args, cc):
         return cc.resolve(nil)
 
+class Applicative(Callable):
+    def __init__(self, name):
+        Callable.__init__(self, name)
+
+    def handle(self, args, cc):
+        return cc.resolve(args)
+
+    def call(self, args, cc):
+        cc1 = Cc(nil, identity, cc.env, False)
+        eargs = args.eval(cc1).run()
+        return self.handle(eargs, cc)
+
 class OpDump(Operative):
     def __init__(self):
         Callable.__init__(self, "dump")
 
     def call(self, args, cc):
         print "dump:", args.to_str()
+        return cc.resolve(nil)
+
+class FnDisplay(Applicative):
+    def __init__(self):
+        Callable.__init__(self, "display")
+
+    def handle(self, args, cc):
+        print "display:", args.to_str()
         return cc.resolve(nil)
 
 class Pair(Type):
@@ -182,14 +224,22 @@ class Pair(Type):
                     break
 
     def eval(self, cc):
-        return Cc(self.head, CallResolver(self, cc), cc.env)
+        if cc.do_run:
+            return Cc(self.head, CallResolver(self, cc), cc.env)
+        else:
+            return Cc(self.head, HeadResolver(self, cc), cc.env, False)
 
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])
 
+identity = Resolver()
+
 def entry_point(argv):
-    identity = Resolver()
-    env = Env({"version": Str("0.0.1"), "dump": OpDump()})
+    env = Env({
+        "version": Str("0.0.1"),
+        "dump": OpDump(),
+        "display": FnDisplay()
+    })
 
     print Cc(Int(42), identity, env).step().to_str()
     print Cc(Float(42.3), identity, env).step().to_str()
@@ -198,8 +248,16 @@ def entry_point(argv):
     print Cc(nil, identity, env).step().to_str()
     print Cc(Str("hello world!"), identity, env).step().to_str()
     print Cc(Symbol("version"), identity, env).step().to_str()
-    result = Cc(Pair(Symbol("dump"), Int(42)), identity, env).run().to_str()
+    result = Cc(Pair(Symbol("dump"), Pair(Int(42))), identity, env).run().to_str()
     print "dump returned:", result
+
+    result1 = Cc(Pair(Symbol("dump"), Pair(Int(42), Pair(Symbol("version")))),
+            identity, env).run().to_str()
+    print "dump returned:", result1
+
+    result2 = Cc(Pair(Symbol("display"), Pair(Int(42), Pair(Symbol("version")))),
+            identity, env).run().to_str()
+    print "display returned:", result2
 
     return 0
 
