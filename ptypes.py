@@ -258,6 +258,8 @@ class Pair(Type):
     def __init__(self, head, tail=nil):
         self.head = head
         self.tail = tail
+        self._length_calculated = False
+        self._size = 0
 
     def __iter__(self):
         pair = self
@@ -280,7 +282,7 @@ class Pair(Type):
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])
 
-    def length(self):
+    def _length(self):
         pair = self
         count = 0
         while True:
@@ -295,6 +297,13 @@ class Pair(Type):
                     break
 
         return count
+
+    def length(self):
+        if not self._length_calculated:
+            self._size = self._length()
+            self._length_calculated = True
+
+        return self._size
 
 identity = Resolver()
 
