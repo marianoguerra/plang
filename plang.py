@@ -25,14 +25,20 @@ class Bool(Type):
         else:
             return "false"
 
+class Nil(Type):
+    def to_str(self):
+        return "nil"
+
 true = Bool(True)
 false = Bool(False)
+nil = Nil(None)
 
 def entry_point(argv):
     print Int(42).to_str()
     print Float(42.3).to_str()
     print true.to_str()
     print false.to_str()
+    print nil.to_str()
     return 0
 
 def target(*args):
