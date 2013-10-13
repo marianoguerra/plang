@@ -4,6 +4,13 @@ class PError(Exception):
     def __init__(self, msg):
         self.msg = msg
 
+class PBadMatchError(PError):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "%s" % self.msg
+
 class PUnboundError(PError):
     def __init__(self, msg, name, env):
         PError.__init__(self, msg)
@@ -90,6 +97,9 @@ class Env(Type):
             raise PUnboundError("'%s' not bound" % name, name, self)
 
         return result
+
+    def set(self, name, value):
+        self.bindings[name] = value
 
 class Int(Type):
     # if not redefined int acts as a float
@@ -181,6 +191,10 @@ class Operative(Callable):
     def call(self, args, cc):
         return cc.resolve(nil)
 
+def expand_pair(pair, cc):
+    cc1 = Cc(nil, identity, cc.env, False)
+    return pair.eval(cc1).run()
+
 class Applicative(Callable):
     def __init__(self, name):
         Callable.__init__(self, name)
@@ -189,8 +203,7 @@ class Applicative(Callable):
         return cc.resolve(args)
 
     def call(self, args, cc):
-        cc1 = Cc(nil, identity, cc.env, False)
-        eargs = args.eval(cc1).run()
+        eargs = expand_pair(args, cc)
         return self.handle(eargs, cc)
 
 class OpDump(Operative):
@@ -206,10 +219,32 @@ class OpDo(Operative):
         Operative.__init__(self, "do")
 
     def call(self, args, cc):
+        result = nil
         for expr in args:
             result = Cc(expr, identity, cc.env).run()
 
         return cc.resolve(result)
+
+class OpDef(Operative):
+    def __init__(self):
+        Operative.__init__(self, "def")
+
+    def call(self, args, cc):
+        if isinstance(args, Pair) and args.length() == 2 and isinstance(args.head, Symbol):
+            sym = args.head
+            name = sym.to_str()
+            value_pair = expand_pair(args.tail, cc)
+
+            if isinstance(value_pair, Pair):
+                value = value_pair.head
+                cc.env.set(name, value)
+                return cc.resolve(value)
+            else:
+                # shouldn't happen, just to make pypy happy
+                raise PBadMatchError("expected (symbol value), got %s" % args.to_str())
+
+        else:
+            raise PBadMatchError("expected (symbol value), got %s" % args.to_str())
 
 class FnDisplay(Applicative):
     def __init__(self):
@@ -244,6 +279,22 @@ class Pair(Type):
 
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])
+
+    def length(self):
+        pair = self
+        count = 0
+        while True:
+            cur = pair.head
+            count += 1
+            if pair.tail == nil:
+                break
+            else:
+                pair = pair.tail
+                if not isinstance(pair, Pair):
+                    count += 1
+                    break
+
+        return count
 
 identity = Resolver()
 

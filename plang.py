@@ -30,6 +30,7 @@ def entry_point(argv):
         "version": Str("0.0.1"),
         "dump": OpDump(),
         "do": OpDo(),
+        "def": OpDef(),
         "display": FnDisplay()
     })
 
