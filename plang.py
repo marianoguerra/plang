@@ -29,6 +29,14 @@ class Nil(Type):
     def to_str(self):
         return "nil"
 
+class Symbol(Type):
+    # if not redefined it doesn't compile
+    def __init__(self, value):
+        self.value = value
+
+    def to_str(self):
+        return "%s" % self.value
+
 true = Bool(True)
 false = Bool(False)
 nil = Nil(None)
@@ -39,6 +47,8 @@ def entry_point(argv):
     print true.to_str()
     print false.to_str()
     print nil.to_str()
+    print Symbol("version").to_str()
+
     return 0
 
 def target(*args):
