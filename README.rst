@@ -6,13 +6,16 @@ try with python::
 
 try with compiled pypy::
 
-    cat examples/nil.nilang | ./plang-c
-
+    echo "nil" | ./plang-c
     nil
+
+    echo "true" | ./plang-c
+    true
+    
+    echo "false" | ./plang-c
+    false
 
 make it fail::
 
     echo "stuff" | ./plang-c
-
-    Error: invalid program 'stuff
-    '
+    Error reading code at line: -1 column: -1

@@ -3,25 +3,48 @@ from rply.token import BaseBox
 
 lg = LexerGenerator()
 lg.add("nil", r"nil")
+lg.add("true", r"true")
+lg.add("false", r"false")
 lg.ignore(r"[\s,\r\n\t]+")
 
 lexer = lg.build()
 
-pg = ParserGenerator(["nil"])
+pg = ParserGenerator(["nil", "true", "false"])
 
 class State(object):
     def __init__(self):
         pass
 
-class Nil(BaseBox):
+# if it doesn't inherith from BaseBox it pypy doesn't compile it
+class Type(BaseBox):
+    def __init__(self):
+        pass
+
+    def to_str(self):
+        return "<type>"
+
+class Nil(Type):
     # without this pypy doesn't compile
     def __init__(self):
-        BaseBox.__init__(self)
+        Type.__init__(self)
 
     def to_str(self):
         return "nil"
 
+class Bool(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def to_str(self):
+        if self.value:
+            return "true"
+        else:
+            return "false"
+
 nil = Nil()
+true = Bool(True)
+false = Bool(False)
 
 @pg.production("main : value")
 def main(state, p):
@@ -30,6 +53,14 @@ def main(state, p):
 @pg.production("value : nil")
 def value_nil(state, p):
     return nil
+
+@pg.production("value : true")
+def value_true(state, p):
+    return true
+
+@pg.production("value : false")
+def value_false(state, p):
+    return false
 
 parser = pg.build()
 
