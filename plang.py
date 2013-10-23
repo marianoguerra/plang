@@ -4,6 +4,7 @@ import sys
 import rply.parser
 
 import edn
+from ptypes import *
 
 def readinput():
     result = []
@@ -18,11 +19,12 @@ def readinput():
 
 def entry_point(argv):
     input_data = readinput()
-    env = edn.Env({"__lang_version__": edn.Str("0.0.1")})
+    env = Env({"__lang_version__": Str("0.0.1")})
+    identity = Resolver()
 
     try:
         input_parsed = edn.loads(input_data)
-        print input_parsed.eval(env).to_str()
+        print Cc(input_parsed, identity, env, None).run().to_str()
     # catching two exceptions here makes pypy fail with a weird error
     except rply.parser.ParsingError as error:
         pos = error.getsourcepos()
@@ -32,7 +34,7 @@ def entry_point(argv):
         pos = error.getsourcepos()
         print "Error reading code at line: %d column: %d" % (pos.lineno, pos.colno)
         return -1
-    except edn.PError as error:
+    except PError as error:
         print error.to_str()
         return -1
 
