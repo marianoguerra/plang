@@ -138,6 +138,36 @@ nil = Nil()
 true = Bool(True)
 false = Bool(False)
 
+class Pair(Type):
+    def __init__(self, head, tail=nil):
+        self.head = head
+        self.tail = tail
+
+    def __iter__(self):
+        pair = self
+        while True:
+            cur = pair.head
+            yield cur
+            if pair.tail == nil:
+                break
+            else:
+                pair = pair.tail
+                if not isinstance(pair, Pair):
+                    break
+
+    def eval(self, env):
+        return self
+
+    def to_str(self):
+        return "(%s)" % " ".join([item.to_str() for item in self])
+
+class ValueList(BaseBox):
+    def __init__(self, value):
+        self.value = value
+
+    def getitems(self):
+        return self.value
+
 @pg.production("main : value")
 def main(state, p):
     return p[0]
@@ -173,6 +203,27 @@ def value_symbol(state, p):
 @pg.production("value : olist clist")
 def value_empty_list(state, p):
     return nil
+
+@pg.production("items : value")
+def value_items_more(state, p):
+    return ValueList([p[0]])
+
+@pg.production("items : value items")
+def value_items_more(state, p):
+    return ValueList([p[0]] + p[1].getitems())
+
+@pg.production("value : olist items clist")
+def value_list(state, p):
+    return pair_from_iter(p[1].getitems())
+
+def pair_from_iter(iterable):
+    items = list(iterable)
+    cur = Pair(items[-1], nil)
+
+    for item in reversed(items[:-1]):
+        cur = Pair(item, cur)
+
+    return cur
 
 parser = pg.build()
 

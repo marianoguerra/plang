@@ -36,6 +36,9 @@ try with compiled pypy::
     echo "()" | ./plang-c
     nil
 
+    echo '(1 2.3 false nil "asd")' | ./plang-c
+    (1 2.300000 false nil "asd")
+
 make it fail::
 
     echo "stuff" | ./plang-c
