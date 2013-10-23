@@ -1,7 +1,0 @@
-(def hello (lambda (name)
-                (display "hello" name)
-                42))
-
-(display (hello "bob"))
-
-1
