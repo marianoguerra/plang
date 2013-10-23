@@ -1,0 +1,9 @@
+(def identity (lambda (value) value))
+
+(def f (lambda (return)
+  (return 2)
+  3))
+ 
+(display (f identity))
+ 
+(display (call-cc f))

@@ -244,7 +244,14 @@ class Cc(Callable):
         return result
 
     def eval(self, cc):
-        return cc.resolve(self)
+        return cc.parent.resolve(self)
+
+    def call(self, args, _cc):
+        if isinstance(args, Pair) and args.length() == 1:
+            return self.resolve(args.head)
+        else:
+            msg = "expected on argument in cc, got %s"
+            raise PBadMatchError(msg % args.to_str())
 
 identity = Resolver()
 

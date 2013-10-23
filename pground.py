@@ -70,11 +70,28 @@ class OpDef(Operative):
             msg = "expected (symbol value), got %s"
             raise PBadMatchError(msg % args.to_str())
 
+class FnCallCc(Applicative):
+    def __init__(self):
+        Callable.__init__(self, "call-cc")
+
+    def handle(self, args, cc):
+        if isinstance(args, Pair) and args.length() == 1:
+            fn = args.head
+            if isinstance(fn, Callable):
+                return fn.call(cc, cc)
+            else:
+                msg = "Expected callable in call-cc, got %s"
+                raise PBadMatchError(msg % fn.to_str())
+        else:
+            msg = "Expected (callable) in call-cc, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
 GROUND = {
     "__lang_version__": Str("0.0.1"),
     "display": FnDisplay(),
     "dump": OpDump(),
     "lambda": OpLambda(),
     "do": OpDo(),
-    "def": OpDef()
+    "def": OpDef(),
+    "call-cc": FnCallCc()
 }
