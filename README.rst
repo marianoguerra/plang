@@ -27,8 +27,11 @@ try with compiled pypy::
     echo '"he\"ll\"o"' | ./plang-c
     "he\"ll\"o"
 
+    echo "woot" | ./plang-c
+    'woot' not bound
+
     echo "__lang_version__" | ./plang-c
-    __lang_version__
+    0.0.1
 
 make it fail::
 
