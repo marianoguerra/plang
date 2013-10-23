@@ -47,10 +47,34 @@ class OpDo(Operative):
     def call(self, args, cc):
         return eval_seq_left(args, cc, cc.env)
 
+class OpDef(Operative):
+    def __init__(self):
+        Operative.__init__(self, "def")
+
+    def call(self, args, cc):
+        if (isinstance(args, Pair) and args.length() == 2 and
+                isinstance(args.head, Symbol)):
+            sym = args.head
+            name = sym.to_str()
+            tail = args.tail
+
+            if isinstance(tail, Pair):
+                value = peval(tail.head, cc.env)
+                cc.env.set(name, value)
+                return cc.resolve(value)
+            else:
+                msg = "expected (symbol value), got %s"
+                raise PBadMatchError(msg % args.to_str())
+
+        else:
+            msg = "expected (symbol value), got %s"
+            raise PBadMatchError(msg % args.to_str())
+
 GROUND = {
     "__lang_version__": Str("0.0.1"),
     "display": FnDisplay(),
     "dump": OpDump(),
     "lambda": OpLambda(),
-    "do": OpDo()
+    "do": OpDo(),
+    "def": OpDef()
 }

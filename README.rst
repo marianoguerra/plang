@@ -56,6 +56,10 @@ try with compiled pypy::
     ("hi")
     "end"
 
+    echo '(def name "bob") (display "hi" name) 42 "end"' | ./plang-c
+    ("hi" "bob")
+    "end"
+
 make it fail::
 
     echo "stuff" | ./plang-c

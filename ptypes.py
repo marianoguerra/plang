@@ -136,6 +136,8 @@ class Pair(Type):
     def __init__(self, head, tail=nil):
         self.head = head
         self.tail = tail
+        self._length_calculated = False
+        self._size = 0
 
     def __iter__(self):
         pair = self
@@ -157,6 +159,29 @@ class Pair(Type):
 
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])
+
+    def _length(self):
+        pair = self
+        count = 0
+        while True:
+            cur = pair.head
+            count += 1
+            if pair.tail == nil:
+                break
+            else:
+                pair = pair.tail
+                if not isinstance(pair, Pair):
+                    count += 1
+                    break
+
+        return count
+
+    def length(self):
+        if not self._length_calculated:
+            self._size = self._length()
+            self._length_calculated = True
+
+        return self._size
 
 class Resolver(object):
     def resolve(self, value):
@@ -225,6 +250,9 @@ identity = Resolver()
 
 def expand_pair(pair, cc):
     return Cc(pair, identity, cc.env, cc, False).run()
+
+def peval(value, env):
+    return Cc(value, identity, env, None).run()
 
 class Applicative(Callable):
     def __init__(self, name):
