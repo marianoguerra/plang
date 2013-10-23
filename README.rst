@@ -33,6 +33,9 @@ try with compiled pypy::
     echo "__lang_version__" | ./plang-c
     0.0.1
 
+    echo "()" | ./plang-c
+    nil
+
 make it fail::
 
     echo "stuff" | ./plang-c

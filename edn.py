@@ -11,13 +11,15 @@ lg.add("float", r"\d+\.\d+")
 lg.add("number", r"\d+")
 lg.add("string", r'"(\\\^.|\\.|[^\"])*"')
 lg.add("symbol", SYMBOL_RE)
+lg.add("olist", r"\(")
+lg.add("clist", r"\)")
 
 lg.ignore(r"[\s,\r\n\t]+")
 
 lexer = lg.build()
 
 pg = ParserGenerator(["nil", "true", "false", "float", "number", "string",
-    "symbol"])
+    "symbol", "olist", "clist"])
 
 class State(object):
     def __init__(self):
@@ -167,6 +169,10 @@ def value_string(state, p):
 @pg.production("value : symbol")
 def value_symbol(state, p):
     return Symbol(p[0].getstr())
+
+@pg.production("value : olist clist")
+def value_empty_list(state, p):
+    return nil
 
 parser = pg.build()
 
