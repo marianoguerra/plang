@@ -235,3 +235,13 @@ class Applicative(Callable):
 
     def to_str(self):
         return "<applicative %s>" % self.name
+
+class Operative(Callable):
+    def __init__(self, name):
+        Callable.__init__(self, name)
+
+    def call(self, args, cc):
+        return cc.resolve(nil)
+
+    def to_str(self):
+        return "<operative %s>" % self.name
