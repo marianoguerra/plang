@@ -27,6 +27,9 @@ try with compiled pypy::
     echo '"he\"ll\"o"' | ./plang-c
     "he\"ll\"o"
 
+    echo "__lang_version__" | ./plang-c
+    __lang_version__
+
 make it fail::
 
     echo "stuff" | ./plang-c
