@@ -1,6 +1,8 @@
 from rply import ParserGenerator, LexerGenerator
 from rply.token import BaseBox
 
+SYMBOL_RE = r"[<>\.\*\/\+\!\-\_\?\$%&=a-zA-Z][<>\.\*\+\!\-\_\?\$%&=a-zA-Z0-9:#]*"
+
 lg = LexerGenerator()
 lg.add("nil", r"nil")
 lg.add("true", r"true")
@@ -8,12 +10,14 @@ lg.add("false", r"false")
 lg.add("float", r"\d+\.\d+")
 lg.add("number", r"\d+")
 lg.add("string", r'"(\\\^.|\\.|[^\"])*"')
+lg.add("symbol", SYMBOL_RE)
 
 lg.ignore(r"[\s,\r\n\t]+")
 
 lexer = lg.build()
 
-pg = ParserGenerator(["nil", "true", "false", "float", "number", "string"])
+pg = ParserGenerator(["nil", "true", "false", "float", "number", "string",
+    "symbol"])
 
 class State(object):
     def __init__(self):
@@ -70,6 +74,14 @@ class Str(Type):
     def to_str(self):
         return '%s' % self.value
 
+class Symbol(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def to_str(self):
+        return self.value
+
 nil = Nil()
 true = Bool(True)
 false = Bool(False)
@@ -101,6 +113,10 @@ def value_integer(state, p):
 @pg.production("value : string")
 def value_string(state, p):
     return Str(p[0].getstr())
+
+@pg.production("value : symbol")
+def value_symbol(state, p):
+    return Symbol(p[0].getstr())
 
 parser = pg.build()
 
