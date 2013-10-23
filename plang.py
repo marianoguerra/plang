@@ -1,6 +1,10 @@
 import os
 import sys
 
+import rply.parser
+
+import edn
+
 def readinput():
     result = []
     while True:
@@ -15,12 +19,20 @@ def readinput():
 def entry_point(argv):
     input_data = readinput()
 
-    if input_data == "nil\n":
-        print "nil"
-        return 0
-    else:
-        print "Error: invalid program '%s'" % input_data
+    try:
+        input_parsed = edn.loads(input_data)
+        print input_parsed.to_str()
+    # catching two exceptions here makes pypy fail with a weird error
+    except rply.parser.ParsingError as error:
+        pos = error.getsourcepos()
+        print "Error reading code at line: %d column: %d" % (pos.lineno, pos.colno)
         return -1
+    except rply.errors.LexingError as error:
+        pos = error.getsourcepos()
+        print "Error reading code at line: %d column: %d" % (pos.lineno, pos.colno)
+        return -1
+
+    return 0
 
 def target(*args):
     return entry_point, None
