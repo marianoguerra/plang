@@ -40,9 +40,17 @@ class OpLambda(Operative):
             msg = "Expected lambda params to be ((*args) *body), got %s"
             raise PBadMatchError(msg % args.to_str())
 
+class OpDo(Operative):
+    def __init__(self):
+        Operative.__init__(self, "do")
+
+    def call(self, args, cc):
+        return eval_seq_left(args, cc, cc.env)
+
 GROUND = {
     "__lang_version__": Str("0.0.1"),
     "display": FnDisplay(),
     "dump": OpDump(),
     "lambda": OpLambda(),
+    "do": OpDo()
 }

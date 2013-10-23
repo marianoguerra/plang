@@ -23,7 +23,7 @@ def entry_point(argv):
     env = Env(pground.GROUND)
 
     try:
-        input_parsed = edn.loads(input_data)
+        input_parsed = edn.loads("(do %s)" % input_data)
         print Cc(input_parsed, identity, env, None).run().to_str()
     # catching two exceptions here makes pypy fail with a weird error
     except rply.parser.ParsingError as error:

@@ -52,6 +52,10 @@ try with compiled pypy::
     echo "((lambda (x) x) 42)" | ./plang-c
     42
 
+    echo '(display "hi") 42 "end"' | ./plang-c
+    ("hi")
+    "end"
+
 make it fail::
 
     echo "stuff" | ./plang-c
