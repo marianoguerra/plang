@@ -31,10 +31,45 @@ class Type(BaseBox):
     def to_str(self):
         return "<type>"
 
+class PError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def to_str(self):
+        return self.msg
+
+class PUnboundError(PError):
+    def __init__(self, msg, name, env):
+        PError.__init__(self, msg)
+        self.name = name
+        self.env = env
+
+    def __str__(self):
+        return "%s: %s" % (self.msg, self.name)
+
+class Env(Type):
+    def __init__(self, bindings):
+        Type.__init__(self)
+        self.bindings = bindings
+
+    def get(self, name):
+        # dict.get must take the two args
+        result = self.bindings.get(name, None)
+        if result is None:
+            raise PUnboundError("'%s' not bound" % name, name, self)
+
+        return result
+
+    def set(self, name, value):
+        self.bindings[name] = value
+
 class Nil(Type):
     # without this pypy doesn't compile
     def __init__(self):
         Type.__init__(self)
+
+    def eval(self, env):
+        return self
 
     def to_str(self):
         return "nil"
@@ -43,6 +78,9 @@ class Bool(Type):
     def __init__(self, value):
         Type.__init__(self)
         self.value = value
+
+    def eval(self, env):
+        return self
 
     def to_str(self):
         if self.value:
@@ -55,6 +93,9 @@ class Int(Type):
         Type.__init__(self)
         self.value = value
 
+    def eval(self, env):
+        return self
+
     def to_str(self):
         return "%d" % self.value
 
@@ -62,6 +103,9 @@ class Float(Type):
     def __init__(self, value):
         Type.__init__(self)
         self.value = value
+
+    def eval(self, env):
+        return self
 
     def to_str(self):
         return "%f" % self.value
@@ -71,6 +115,9 @@ class Str(Type):
         Type.__init__(self)
         self.value = value
 
+    def eval(self, env):
+        return self
+
     def to_str(self):
         return '%s' % self.value
 
@@ -78,6 +125,9 @@ class Symbol(Type):
     def __init__(self, value):
         Type.__init__(self)
         self.value = value
+
+    def eval(self, env):
+        return env.get(self.value)
 
     def to_str(self):
         return self.value
