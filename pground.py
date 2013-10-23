@@ -86,6 +86,188 @@ class FnCallCc(Applicative):
             msg = "Expected (callable) in call-cc, got %s"
             raise PBadMatchError(msg % args.to_str())
 
+class NumOp(Applicative):
+    def __init__(self, name, zero):
+        Applicative.__init__(self, name)
+        self.zero = zero
+
+    def handle(self, args, cc):
+        result = self.zero
+        saw_float = False
+        if args is nil:
+            return cc.resolve(Int(int(self.zero)))
+        elif isinstance(args, Pair):
+            if args.length() == 1:
+                return cc.resolve(self.handle_one(args.head))
+
+            first = True
+            for item in args:
+                if isinstance(item, Int):
+                    result = self.calculate(result, item.value, first)
+                elif isinstance(item, Float):
+                    saw_float = True
+                    result = self.calculate(result, item.value, first)
+                else:
+                    msg = "Expected Int or Float, got %s"
+                    raise PBadMatchError(msg % item.to_str())
+
+                first = False
+
+            if saw_float:
+                return cc.resolve(Float(result))
+            else:
+                return cc.resolve(Int(int(result)))
+        else:
+            msg = "Expected Pair, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
+class FnAdd(NumOp):
+    def __init__(self):
+        NumOp.__init__(self, "+", 0.0)
+
+    def calculate(self, actual, new_value, is_first):
+        return actual + new_value
+
+    def handle_one(self, value):
+        return value
+
+class FnSub(NumOp):
+    def __init__(self):
+        NumOp.__init__(self, "-", 0.0)
+
+    def calculate(self, actual, new_value, is_first):
+        if is_first:
+            return new_value
+        else:
+            return actual - new_value
+
+    def handle_one(self, value):
+        if isinstance(value, Int):
+            return Int(-value.value)
+        elif isinstance(value, Float):
+            return Float(-value.value)
+        else:
+            msg = "Expected Int or Float, got %s"
+            raise PBadMatchError(msg % value.to_str())
+
+class FnMul(NumOp):
+    def __init__(self):
+        NumOp.__init__(self, "*", 1.0)
+
+    def calculate(self, actual, new_value, is_first):
+        return actual * new_value
+
+    def handle_one(self, value):
+        return value
+
+class FnDiv(NumOp):
+    def __init__(self):
+        NumOp.__init__(self, "/", 1.0)
+
+    def calculate(self, actual, new_value, is_first):
+        if is_first:
+            return new_value
+        else:
+            return actual / new_value
+
+    def handle_one(self, value):
+        if isinstance(value, Int):
+            return Int(1 / value.value)
+        elif isinstance(value, Float):
+            return Float(1.0 / value.value)
+        else:
+            msg = "Expected Int or Float, got %s"
+            raise PBadMatchError(msg % value.to_str())
+
+class CompNumOp(Applicative):
+    def __init__(self, name, zero):
+        Applicative.__init__(self, name)
+        self.zero = zero
+
+    def handle(self, args, cc):
+        result = self.zero
+        last = 0
+        if args is nil:
+            return cc.resolve(self.zero)
+        elif isinstance(args, Pair):
+            if args.length() == 1:
+                return cc.resolve(true)
+
+            first = True
+            for item in args:
+
+                if isinstance(item, Int):
+                    if first:
+                        # ugly and may fail
+                        last = item.value
+                        first = False
+                        continue
+
+                    result = self.calculate(last, item.value)
+                # duplication for pypy
+                elif isinstance(item, Float):
+                    if first:
+                        last = item.value
+                        first = False
+                        continue
+
+                    result = self.calculate(last, item.value)
+                else:
+                    msg = "Expected Int or Float, got %s"
+                    raise PBadMatchError(msg % item.to_str())
+
+                first = False
+
+                if not result:
+                    return cc.resolve(false)
+
+            return cc.resolve(true)
+        else:
+            msg = "Expected Pair, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
+class OpLt(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "<", true)
+
+    def calculate(self, last, current):
+        return last < current
+
+class OpGt(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, ">", true)
+
+    def calculate(self, last, current):
+        return last > current
+
+class OpLe(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "<=", true)
+
+    def calculate(self, last, current):
+        return last <= current
+
+class OpGe(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, ">=", true)
+
+    def calculate(self, last, current):
+        return last >= current
+
+class OpEq(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "==", true)
+
+    def calculate(self, last, current):
+        return last == current
+
+class OpNe(CompNumOp):
+    def __init__(self):
+        CompNumOp.__init__(self, "!=", true)
+
+    def calculate(self, last, current):
+        return last != current
+
 GROUND = {
     "__lang_version__": Str("0.0.1"),
     "display": FnDisplay(),
@@ -93,5 +275,17 @@ GROUND = {
     "lambda": OpLambda(),
     "do": OpDo(),
     "def": OpDef(),
-    "call-cc": FnCallCc()
+    "call-cc": FnCallCc(),
+
+    "+": FnAdd(),
+    "-": FnSub(),
+    "*": FnMul(),
+    "/": FnDiv(),
+
+    "<": OpLt(),
+    ">": OpGt(),
+    "<=": OpLe(),
+    ">=": OpGe(),
+    "==": OpEq(),
+    "!=": OpNe()
 }

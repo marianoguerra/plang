@@ -60,6 +60,17 @@ try with compiled pypy::
     ("hi" "bob")
     "end"
 
+    cat examples/callcc.plang | ./plang-c
+    (3)
+    (2)
+    nil
+
+    echo "(+ 1 3 (* 4 5))" | ./plang-c
+    24
+
+    echo "(< (+ 1 3 (* 4 5)) 25)" | ./plang-c
+    true
+
 make it fail::
 
     echo "stuff" | ./plang-c
