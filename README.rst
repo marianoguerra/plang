@@ -15,6 +15,12 @@ try with compiled pypy::
     echo "false" | ./plang-c
     false
 
+    echo "42.3" | ./plang-c
+    42.300000
+
+    echo "42" | ./plang-c
+    42
+
 make it fail::
 
     echo "stuff" | ./plang-c

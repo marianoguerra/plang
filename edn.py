@@ -5,11 +5,14 @@ lg = LexerGenerator()
 lg.add("nil", r"nil")
 lg.add("true", r"true")
 lg.add("false", r"false")
+lg.add("float", r"\d+\.\d+")
+lg.add("number", r"\d+")
+
 lg.ignore(r"[\s,\r\n\t]+")
 
 lexer = lg.build()
 
-pg = ParserGenerator(["nil", "true", "false"])
+pg = ParserGenerator(["nil", "true", "false", "float", "number"])
 
 class State(object):
     def __init__(self):
@@ -42,6 +45,22 @@ class Bool(Type):
         else:
             return "false"
 
+class Int(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def to_str(self):
+        return "%d" % self.value
+
+class Float(Type):
+    def __init__(self, value):
+        Type.__init__(self)
+        self.value = value
+
+    def to_str(self):
+        return "%f" % self.value
+
 nil = Nil()
 true = Bool(True)
 false = Bool(False)
@@ -61,6 +80,14 @@ def value_true(state, p):
 @pg.production("value : false")
 def value_false(state, p):
     return false
+
+@pg.production("value : float")
+def value_float(state, p):
+    return Float(float(p[0].getstr()))
+
+@pg.production("value : number")
+def value_integer(state, p):
+    return Int(int(p[0].getstr()))
 
 parser = pg.build()
 
