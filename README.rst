@@ -21,6 +21,12 @@ try with compiled pypy::
     echo "42" | ./plang-c
     42
 
+    echo '"hello"' | ./plang-c
+    "hello"
+
+    echo '"he\"ll\"o"' | ./plang-c
+    "he\"ll\"o"
+
 make it fail::
 
     echo "stuff" | ./plang-c
