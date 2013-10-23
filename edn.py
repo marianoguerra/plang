@@ -15,6 +15,7 @@ lg.add("olist", r"\(")
 lg.add("clist", r"\)")
 
 lg.ignore(r"[\s,\r\n\t]+")
+lg.ignore(r";.*\n")
 
 lexer = lg.build()
 
