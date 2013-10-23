@@ -24,6 +24,21 @@ class PUnboundError(PError):
     def __str__(self):
         return "%s: %s" % (self.msg, self.name)
 
+class PBadMatchError(PError):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return "%s" % self.msg
+
+class PCallableExpectedError(PError):
+    def __init__(self, msg, value):
+        self.msg = msg
+        self.value = value
+
+    def __str__(self):
+        return "%s: %s" % (self.msg, self.value.to_str())
+
 class Env(Type):
     def __init__(self, bindings):
         Type.__init__(self)
@@ -131,7 +146,10 @@ class Pair(Type):
                     break
 
     def eval(self, cc):
-        return cc.resolve(self)
+        if cc.do_run:
+            return Cc(self.head, CallResolver(self, cc), cc.env, cc)
+        else:
+            return Cc(self.head, HeadResolver(self, cc), cc.env, cc)
 
     def to_str(self):
         return "(%s)" % " ".join([item.to_str() for item in self])
@@ -139,6 +157,34 @@ class Pair(Type):
 class Resolver(object):
     def resolve(self, value):
         return value
+
+class CallResolver(Resolver):
+    def __init__(self, val, cc):
+        self.val = val
+        self.cc = cc
+
+    def resolve(self, value):
+        if isinstance(value, Callable):
+            return value.call(self.val.tail, self.cc)
+        else:
+            raise PCallableExpectedError("Callable expected", value)
+
+class TailResolver(Resolver):
+    def __init__(self, val, cc):
+        self.val = val
+        self.cc = cc
+
+    def resolve(self, tail):
+        return self.cc.resolve(Pair(self.val, tail))
+
+class HeadResolver(Resolver):
+    def __init__(self, val, cc):
+        self.val = val
+        self.cc = cc
+
+    def resolve(self, head):
+        return Cc(self.val.tail, TailResolver(head, self.cc), self.cc.env,
+                self.cc, False)
 
 class Callable(Type):
     def __init__(self, name):
@@ -170,3 +216,22 @@ class Cc(Callable):
 
     def eval(self, cc):
         return cc.resolve(self)
+
+identity = Resolver()
+
+def expand_pair(pair, cc):
+    return Cc(pair, identity, cc.env, cc, False).run()
+
+class Applicative(Callable):
+    def __init__(self, name):
+        Callable.__init__(self, name)
+
+    def handle(self, args, cc):
+        return cc.resolve(args)
+
+    def call(self, args, cc):
+        eargs = expand_pair(args, cc)
+        return self.handle(eargs, cc)
+
+    def to_str(self):
+        return "<applicative %s>" % self.name

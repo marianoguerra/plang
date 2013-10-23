@@ -39,6 +39,11 @@ try with compiled pypy::
     echo '(1 2.3 false nil "asd")' | ./plang-c
     (1 2.300000 false nil "asd")
 
+    echo '(display 1 2.3 false nil "asd" (display __lang_version__)) ; comment' | ./plang-c
+    (0.0.1)
+    (1 2.300000 false nil "asd" nil)
+    nil
+
 make it fail::
 
     echo "stuff" | ./plang-c

@@ -4,6 +4,7 @@ import sys
 import rply.parser
 
 import edn
+import pground
 from ptypes import *
 
 def readinput():
@@ -19,8 +20,7 @@ def readinput():
 
 def entry_point(argv):
     input_data = readinput()
-    env = Env({"__lang_version__": Str("0.0.1")})
-    identity = Resolver()
+    env = Env(pground.GROUND)
 
     try:
         input_parsed = edn.loads(input_data)
