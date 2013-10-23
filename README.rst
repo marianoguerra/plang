@@ -49,6 +49,9 @@ try with compiled pypy::
     (1 2.300000 false nil "asd" nil)
     nil
 
+    echo "((lambda (x) x) 42)" | ./plang-c
+    42
+
 make it fail::
 
     echo "stuff" | ./plang-c

@@ -40,15 +40,19 @@ class PCallableExpectedError(PError):
         return "%s: %s" % (self.msg, self.value.to_str())
 
 class Env(Type):
-    def __init__(self, bindings):
-        Type.__init__(self)
+    def __init__(self, bindings, parent=None):
+        self.value = None
         self.bindings = bindings
+        self.parent = parent
 
     def get(self, name):
         # dict.get must take the two args
         result = self.bindings.get(name, None)
         if result is None:
-            raise PUnboundError("'%s' not bound" % name, name, self)
+            if self.parent is None:
+                raise PUnboundError("'%s' not bound" % name, name, self)
+            else:
+                return self.parent.get(name)
 
         return result
 
@@ -245,3 +249,61 @@ class Operative(Callable):
 
     def to_str(self):
         return "<operative %s>" % self.name
+
+class LeftResolver(Resolver):
+    def __init__(self, rest, cc, env):
+        self.rest = rest
+        self.cc = cc
+        self.env = env
+
+    def resolve(self, value):
+        if self.rest is nil:
+            return self.cc.resolve(value)
+        else:
+            return eval_seq_left(self.rest, self.cc, self.env)
+
+def eval_seq_left(pair, cc, env):
+    if pair is nil:
+        return cc.resolve(nil)
+    elif isinstance(pair, Pair):
+        return Cc(pair.head, LeftResolver(pair.tail, cc, env), env, cc)
+    else:
+        msg = "expected sequence of forms in body, got %s"
+        raise PBadMatchError(msg % pair.to_str())
+
+class Lambda(Applicative):
+    def __init__(self, argnames, body):
+        Applicative.__init__(self, "<lambda>")
+        self.body = body
+        self.argnames = argnames
+
+    def handle(self, args, cc):
+        if not isinstance(args, Pair):
+            msg = "Expected sequence for function arguments, got %s"
+            raise PBadMatchError(msg % args.to_str())
+
+        env = Env({}, cc.env)
+
+        # pypy doesn't like list(args)
+        arglist = [item for item in args]
+        args_len = len(arglist)
+        argnames_len = len(self.argnames)
+
+        if args_len != argnames_len:
+            raise PBadMatchError("expected %d arguments, got %d" % (
+                argnames_len, args_len))
+
+        for i in range(args_len):
+            argname = self.argnames[i]
+            arg = arglist[i]
+            env.set(argname, arg)
+
+        return eval_seq_left(self.body, cc, env)
+
+    def call(self, args, cc):
+        eargs = expand_pair(args, cc)
+        return self.handle(eargs, cc)
+
+    def to_str(self):
+        return "<lambda>"
+
